@@ -7,7 +7,7 @@ import sys
 
 class Hertz(object):
 
-    def __init__(self, duration=60, rate=44100, frequency=40.0):
+    def __init__(self, volume=0.5, duration=5, rate=44100, frequency=40.0):
         self._duration=duration   # in seconds, may be float
         self._rate=rate           # sampling rate, Hz, must be integer
         self._frequency=frequency # sine frequency, Hz, must be float
@@ -31,18 +31,18 @@ class Hertz(object):
 
     @staticmethod
     def generate(type):
-        if type == 'b':
-            print(f'Generating Blocking Stream')
-            return Blocking()
-        else:
-            print(f'Generating NonBlocking Stream')
+        if type is None or type != 'b':
+            print('Generating NonBlocking Stream')
             return NonBlocking()
+        else:
+            print('Generating Blocking Stream')
+            return Blocking()
 
 
 class Blocking(Hertz):
 
-    def __init__(self, **kwargs):
-        super(Blocking, self).__init__(kwargs) # black python magic
+    def __init__(self, *args, **kwargs):
+        super(Blocking, self).__init__(kwargs) # python black magic
 
     def _generate_stream(self):
         self._stream = self._p.open(
@@ -63,20 +63,21 @@ class Blocking(Hertz):
 
 class NonBlocking(Hertz):
 
-    def __init__(self, **kwargs):
-        super(NonBlocking, self).__init__(kwargs) # black python magic
+    def __init__(self, *args, **kwargs):
+        super(NonBlocking, self).__init__(kwargs) # python black magic
         self._frames_per_buffer = 2048
         self._outbuf = array.array('f',range(self._frames_per_buffer))
         self._phase = 0
 
     def _generate_stream(self):
-        self._stream = self._p.open(format=pyaudio.paFloat32,
-                        channels=1,
-                        rate=self._rate,
-                        frames_per_buffer=self._frames_per_buffer,
-                        input=False,
-                        output=True,
-                        stream_callback=self._callback)
+        self._stream = self._p.open(
+            format=pyaudio.paFloat32,
+            channels=1,
+            rate=self._rate,
+            frames_per_buffer=self._frames_per_buffer,
+            input=False,
+            output=True,
+            stream_callback=self._callback)
 
     def _callback(self, in_data, frame_count, time_info, status):
         for n in range(frame_count):
@@ -100,5 +101,8 @@ class NonBlocking(Hertz):
 
 
 if __name__ == '__main__':
-    with Hertz.generate(sys.argv[1]) as hz:
+    arg = None
+    if len(sys.argv) > 1:
+        arg = sys.argv[1]
+    with Hertz.generate(arg) as hz:
         hz.sound()
